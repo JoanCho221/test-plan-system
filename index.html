@@ -855,188 +855,107 @@ function genPurpose(t, isReq){
 // ════════════════════════════════════════════
 async function downloadDocx(){
   const tests=getCheckedTests();
+  if(tests.length===0){alert('請先勾選測試項目');return;}
+  if(typeof docx==='undefined'){alert('錯誤：docx 函式庫未載入，請重新整理頁面');return;}
+
   const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   tests.forEach((t,i)=>{t._letter=letters[i]||String(i+1);});
 
   const {Document,Packer,Paragraph,Table,TableRow,TableCell,TextRun,
-    AlignmentType,WidthType,BorderStyle,ShadingType,VerticalAlign,HeadingLevel}=docx;
+    AlignmentType,WidthType,BorderStyle,ShadingType,VerticalAlign}=docx;
 
-  const W=11906,ML=720,MR=720,PW=W-ML-MR; // A4, 1cm margins each side
-  const CELL_PAD={top:60,bottom:60,left:100,right:100};
-
+  const W=11906,ML=720,MR=720,PW=W-ML-MR;
+  const PAD={top:60,bottom:60,left:100,right:100};
   const B={style:BorderStyle.SINGLE,size:4,color:'CCCCCC'};
   const BD={top:B,bottom:B,left:B,right:B};
   const BH={style:BorderStyle.SINGLE,size:6,color:'9EC5E8'};
   const BHD={top:BH,bottom:BH,left:BH,right:BH};
-
   const SH={fill:'EBF3FB',type:ShadingType.CLEAR};
-  const SH2={fill:'F7F7F5',type:ShadingType.CLEAR};
 
   const projNo=document.getElementById('fi-projno').value||'PMQP-XXX';
-  const dateVal=document.getElementById('fi-date').value||'—';
+  const dateVal=document.getElementById('fi-date').value||'';
   const ver=document.getElementById('fi-ver').value||'1.0';
   const prodName=document.getElementById('fi-prodname').value||'[產品名稱]';
   const model=document.getElementById('fi-model').value||'[型號]';
   const owner=document.getElementById('fi-owner').value||'[負責人]';
-
   const allProds=[...Object.values(PRODUCTS)].flat();
   const prodLabels=[...selProds].map(id=>{const p=allProds.find(x=>x.id===id);return p?p.label:id;}).join('、');
-
-  function txt(text,opts={}){
-    return new TextRun({text:String(text||''),font:{name:'標楷體'},size:22,...opts});
-  }
-  function p(children,opts={}){
-    return new Paragraph({children:Array.isArray(children)?children:[children],
-      spacing:{line:276,lineRule:'auto',before:0,after:0},...opts});
-  }
-  function hdrCell(text,w,span=1){
-    return new TableCell({width:{size:w,type:WidthType.DXA},columnSpan:span,
-      borders:BHD,shading:SH,margins:CELL_PAD,verticalAlign:VerticalAlign.CENTER,
-      children:[p(txt(text,{bold:true,size:20}),{alignment:AlignmentType.CENTER})]});
-  }
-  function dataCell(text,w,span=1,align='left',shade=false){
-    return new TableCell({width:{size:w,type:WidthType.DXA},columnSpan:span,
-      borders:BD,shading:shade?SH2:undefined,margins:CELL_PAD,verticalAlign:VerticalAlign.TOP,
-      children:[p(txt(text,{size:20}),{alignment:align==='center'?AlignmentType.CENTER:AlignmentType.LEFT})]});
-  }
-  function multilineCell(lines,w,span=1){
-    return new TableCell({width:{size:w,type:WidthType.DXA},columnSpan:span,
-      borders:BD,margins:CELL_PAD,verticalAlign:VerticalAlign.TOP,
-      children:lines.map(l=>p(txt(l,{size:20})))});
-  }
-
-  function secHeading(num,title){
-    return p([txt(`${num}. ${title}`,{bold:true,size:24})],
-      {spacing:{before:160,after:80},border:{bottom:{style:BorderStyle.SINGLE,size:6,color:'C8C5BE',space:1}}});
-  }
-
   const {mats,procs}=getAttrs();
   const allAttrs=[...mats,...procs];
 
-  // ── Section 1 Table: 測試目的
-  const s1Rows=[new TableRow({children:[hdrCell('項目',500),hdrCell('測試名稱 / 標準',2200),hdrCell('目的說明',PW-500-2200)]})];
-  tests.forEach(t=>{
-    const isReq=t.req_trigger.some(r=>allAttrs.includes(r));
-    const catP={
-      '生物相容性':'依 ISO 10993-1 評估矩陣確認材料皮膚接觸安全性',
-      '化學安全':'確認有害化學物符合法規限量，保護使用者健康',
-      '紡織安全':'依 GB 18401 確認直接接觸皮膚之紡織品化學安全性',
-      '物理性能':'確認預期使用條件下之機械性能符合設計規格',
-      '耐久性':'確認產品在使用壽命內維持功能性與外觀品質',
-      '標示與法規':'確認標示符合目標市場法規，提供完整使用資訊',
-      '功能確效':'確認製程穩定、成品規格在允收範圍',
-    };
-    s1Rows.push(new TableRow({children:[
-      dataCell(t._letter,500,'1','center'),
-      multilineCell([t.name,t.std],2200),
-      dataCell((catP[t.cat]||'確認品質安全')+(isReq?'（必要）':''),PW-500-2200),
-    ]}));
-  });
+  function T(text,opts={}){return new TextRun({text:String(text||''),font:{name:'標楷體'},size:22,...opts});}
+  function P(ch,opts={}){return new Paragraph({children:Array.isArray(ch)?ch:[ch],spacing:{line:276,lineRule:'auto',before:0,after:0},...opts});}
+  function HC(text,w,span=1){return new TableCell({width:{size:w,type:WidthType.DXA},columnSpan:span,borders:BHD,shading:SH,margins:PAD,children:[P(T(text,{bold:true,size:20}),{alignment:AlignmentType.CENTER})]});}
+  function DC(text,w,span=1,center=false){return new TableCell({width:{size:w,type:WidthType.DXA},columnSpan:span,borders:BD,margins:PAD,children:[P(T(text||'—',{size:20}),{alignment:center?AlignmentType.CENTER:AlignmentType.LEFT})]});}
+  function MC(lines,w,span=1){return new TableCell({width:{size:w,type:WidthType.DXA},columnSpan:span,borders:BD,margins:PAD,children:lines.map(l=>P(T(l||'',{size:20})))});}
+  function SH2(num,title){return P([T(num+'. '+title,{bold:true,size:24})],{spacing:{before:160,after:80},border:{bottom:{style:BorderStyle.SINGLE,size:6,color:'C8C5BE',space:1}}});}
+  function TBL(rows){return new Table({width:{size:PW,type:WidthType.DXA},rows});}
 
-  // ── Section 2 Table: 方法
-  const s2Rows=[new TableRow({children:[hdrCell('項目',500),hdrCell('試驗方法／原理',PW-500)]})];
-  tests.forEach(t=>{
-    s2Rows.push(new TableRow({children:[
-      dataCell(t._letter,500,'1','center'),
-      dataCell(t.method||'—',PW-500),
-    ]}));
-  });
+  const catP={'生物相容性':'依 ISO 10993-1 評估矩陣確認材料皮膚接觸安全性','化學安全':'確認有害化學物符合法規限量，保護使用者健康','紡織安全':'依 GB 18401 確認直接接觸皮膚之紡織品化學安全性','物理性能':'確認預期使用條件下之機械性能符合設計規格','耐久性':'確認產品在使用壽命內維持功能性與外觀品質','標示與法規':'確認標示符合目標市場法規，提供完整使用資訊','功能確效':'確認製程穩定、成品規格在允收範圍'};
 
-  // ── Section 3 Table: 說明/條件
-  const s3Rows=[new TableRow({children:[hdrCell('項目',500),hdrCell('試驗條件 / 步驟 / 注意事項',PW-500)]})];
+  const s1=[new TableRow({children:[HC('項目',500),HC('測試名稱/標準',2200),HC('目的說明',PW-2700)]})];
+  const s2=[new TableRow({children:[HC('項目',500),HC('試驗方法／原理',PW-500)]})];
+  const s3=[new TableRow({children:[HC('項目',500),HC('試驗條件/步驟/注意事項',PW-500)]})];
+  const s4=[new TableRow({children:[HC('項目',500),HC('樣品需求',2000),HC('允收標準/法規',PW-2500)]})];
+  const s5=[new TableRow({children:[HC('項目',500),HC('執行地點',2500),HC('時間估計',1400),HC('備註',PW-4400)]})];
+
   tests.forEach((t,i)=>{
+    const isReq=t.req_trigger.some(r=>allAttrs.includes(r));
     const prev=i>0?tests[i-1]:null;
-    const isSame=prev&&t.cond===prev.cond;
-    s3Rows.push(new TableRow({children:[
-      dataCell(t._letter,500,'1','center'),
-      dataCell(isSame?`同項目 ${prev._letter}`:t.cond||'—',PW-500),
-    ]}));
+    const sameCond=prev&&t.cond===prev.cond;
+    s1.push(new TableRow({children:[DC(t._letter,500,1,true),MC([t.name,t.std],2200),DC((catP[t.cat]||'確認品質安全')+(isReq?'（必要）':''),PW-2700)]}));
+    s2.push(new TableRow({children:[DC(t._letter,500,1,true),DC(t.method,PW-500)]}));
+    s3.push(new TableRow({children:[DC(t._letter,500,1,true),DC(sameCond?'同項目 '+prev._letter:t.cond,PW-500)]}));
+    s4.push(new TableRow({children:[DC(t._letter,500,1,true),DC(t.sample,2000),MC([t.accept||'—','依據：'+t.std],PW-2500)]}));
+    s5.push(new TableRow({children:[DC(t._letter,500,1,true),DC(t.location,2500),DC(t.duration,1400),DC(t.note||'—',PW-4400)]}));
   });
 
-  // ── Section 4 Table: 樣品/標準
-  const s4Rows=[new TableRow({children:[hdrCell('項目',500),hdrCell('樣品需求',2000),hdrCell('允收標準 / 法規依據',PW-500-2000)]})];
-  tests.forEach(t=>{
-    s4Rows.push(new TableRow({children:[
-      dataCell(t._letter,500,'1','center'),
-      dataCell(t.sample||'—',2000),
-      multilineCell([t.accept||'—',`依據：${t.std}`],PW-500-2000),
-    ]}));
-  });
-
-  // ── Section 5 Table: 時間/地點
-  const s5Rows=[new TableRow({children:[hdrCell('項目',500),hdrCell('執行地點',2500),hdrCell('時間估計',1400),hdrCell('備註',PW-500-2500-1400)]})];
-  tests.forEach(t=>{
-    s5Rows.push(new TableRow({children:[
-      dataCell(t._letter,500,'1','center'),
-      dataCell(t.location||'—',2500),
-      dataCell(t.duration||'—',1400),
-      dataCell(t.note||'—',PW-500-2500-1400),
-    ]}));
-  });
-
-  function makeTable(rows){
-    return new Table({width:{size:PW,type:WidthType.DXA},rows,
-      columnWidths:[PW],margins:{top:0,bottom:0,left:0,right:0}});
-  }
-
-  const doc=new Document({
-    styles:{default:{document:{run:{font:{name:'標楷體'},size:22}}}},
-    sections:[{
-      properties:{page:{size:{width:W,height:16838},
-        margin:{top:ML,right:MR,bottom:ML,left:ML,header:400,footer:400}}},
-      children:[
-        // Header block
-        p([txt('P.137.01  測試計劃書',{bold:true,size:28})],
-          {alignment:AlignmentType.CENTER,spacing:{before:0,after:120}}),
-        // Meta table
-        new Table({width:{size:PW,type:WidthType.DXA},
-          rows:[
-            new TableRow({children:[
-              hdrCell('專案編號',1600),dataCell(projNo,2400),
-              hdrCell('日期',1000),dataCell(dateVal,1500),
-              hdrCell('版本',800),dataCell(ver,PW-1600-2400-1000-1500-800)
-            ]}),
-            new TableRow({children:[
-              hdrCell('產品名稱',1600),dataCell(prodName,2400),
-              hdrCell('負責人',1000),dataCell(owner,PW-1600-2400-1000,'left',false,3)
-            ]}),
-            new TableRow({children:[
-              hdrCell('產品型號',1600),dataCell(model,2400),
-              hdrCell('涵蓋產品',1000),dataCell(prodLabels,PW-1600-2400-1000,'left',false,3)
-            ]}),
+  try{
+    const doc=new Document({
+      styles:{default:{document:{run:{font:{name:'標楷體'},size:22}}}},
+      sections:[{
+        properties:{page:{size:{width:W,height:16838},margin:{top:ML,right:MR,bottom:ML,left:ML}}},
+        children:[
+          P([T('P.137.01  測試計劃書',{bold:true,size:28})],{alignment:AlignmentType.CENTER,spacing:{before:0,after:120}}),
+          new Table({width:{size:PW,type:WidthType.DXA},rows:[
+            new TableRow({children:[HC('專案編號',1600),DC(projNo,2400),HC('日期',1000),DC(dateVal,1500),HC('版本',800),DC(ver,PW-7300)]}),
+            new TableRow({children:[HC('產品名稱',1600),DC(prodName,2400),HC('負責人',1000),DC(owner,PW-5000,3)]}),
+            new TableRow({children:[HC('產品型號',1600),DC(model,2400),HC('涵蓋產品',1000),DC(prodLabels,PW-5000,3)]}),
           ]}),
-        p(''),
-        // Section 1
-        secHeading(1,'測試目的'),makeTable(s1Rows),p(''),
-        // Section 2
-        secHeading(2,'測試方法／原理'),makeTable(s2Rows),p(''),
-        // Section 3
-        secHeading(3,'測試說明（步驟、參數、對照組及注意事項）'),makeTable(s3Rows),p(''),
-        // Section 4
-        secHeading(4,'測試需求樣品（數量、規格）／標準（法規或允收要求）'),makeTable(s4Rows),p(''),
-        // Section 5
-        secHeading(5,'測試時間／期間、地點／人員／環境設備條件'),makeTable(s5Rows),p(''),
-        // Section 6
-        secHeading(6,'其他'),
-        p(txt('• 本計畫書依 ISO 13485:2016 及 ISO 10993-1:2018 風險評估矩陣產生，所有測試項目均為皮膚外部接觸 Class I 醫療器材之必要或條件性評估項目。',{size:20}),{spacing:{before:0,after:60}}),
-        p(txt('• 生物相容性三項（ISO 10993-5/-10/-23）建議依材料種類分組同批次委外送測，材料分組：A-彈性布料類、B-壓感膠類、C-矽膠凝膠類、D-膜材類。',{size:20}),{spacing:{before:0,after:60}}),
-        p(txt('• 測試報告完成後依 ISO 13485 §4.2.5 保存至產品停產後 15 年，納入 DHF 存檔。',{size:20}),{spacing:{before:0,after:60}}),
-        p(txt('• 測試不合格時，依《不合格品管制程序》開立 NCR，評估後決定重測、設計變更或依 ISO 14971 進行風險接受。',{size:20}),{spacing:{before:0,after:120}}),
-        // Signature
-        p([txt('審核：_______________　　主管：_______________　　負責人：_______________',{size:22})],
-          {alignment:AlignmentType.CENTER,spacing:{before:160,after:0},
-           border:{top:{style:BorderStyle.SINGLE,size:4,color:'C8C5BE',space:4}}}),
-      ]
-    }]
-  });
+          P(''),
+          SH2(1,'測試目的'),TBL(s1),P(''),
+          SH2(2,'測試方法／原理'),TBL(s2),P(''),
+          SH2(3,'測試說明（步驟、參數、對照組及注意事項）'),TBL(s3),P(''),
+          SH2(4,'測試需求樣品（數量、規格）／標準（法規或允收要求）'),TBL(s4),P(''),
+          SH2(5,'測試時間／期間、地點／人員／環境設備條件'),TBL(s5),P(''),
+          SH2(6,'其他'),
+          P(T('• 本計畫書依 ISO 13485:2016 及 ISO 10993-1:2018 產生，所有項目為皮膚外部接觸 Class I 醫療器材評估項目。',{size:20}),{spacing:{before:0,after:60}}),
+          P(T('• 生物相容性（ISO 10993-5/-10/-23）建議依材料分組同批次委外：A-彈性布料、B-壓感膠、C-矽膠凝膠、D-膜材類。',{size:20}),{spacing:{before:0,after:60}}),
+          P(T('• 測試報告依 ISO 13485 §4.2.5 保存至產品停產後 15 年，納入 DHF。',{size:20}),{spacing:{before:0,after:60}}),
+          P(T('• 不合格時依《不合格品管制程序》開立 NCR，依 ISO 14971 評估後處理。',{size:20}),{spacing:{before:0,after:120}}),
+          P([T('審核：_______________　　主管：_______________　　負責人：_______________',{size:22})],
+            {alignment:AlignmentType.CENTER,spacing:{before:160,after:0},
+             border:{top:{style:BorderStyle.SINGLE,size:4,color:'C8C5BE',space:4}}}),
+        ]
+      }]
+    });
 
-  const buf=await Packer.toBuffer(doc);
-  const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=`測試計劃書_${projNo}_${dateVal.replace(/\//g,'')}.docx`;
-  a.click();
-  toast('Word 檔案下載中 ✓');
+    toast('產生中，請稍候...');
+    const base64=await Packer.toBase64String(doc);
+    const bin=atob(base64);
+    const bytes=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+    const blob=new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download='測試計劃書_'+projNo+'_'+dateVal.replace(/\//g,'')+'.docx';
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},2000);
+    toast('Word 檔案下載中 ✓');
+  }catch(err){
+    console.error('docx error:',err);
+    alert('產生 Word 失敗：'+err.message+'\n請按 F12 開啟開發者工具查看 Console 錯誤。');
+  }
 }
 
 // ════════════════════════════════════════════
